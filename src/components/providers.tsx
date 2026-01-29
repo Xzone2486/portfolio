@@ -1,4 +1,3 @@
-import SocketContextProvider from "@/contexts/socketio";
 import Preloader from "./preloader";
 import { ThemeProvider } from "./theme-provider";
 import { Toaster } from "./ui/toaster";
@@ -9,15 +8,14 @@ export const Providers = ({ children }: { children: React.ReactNode }) => {
   return <ThemeProvider
     attribute="class"
     defaultTheme="dark"
+    forcedTheme="dark"
     disableTransitionOnChange
   >
     <Preloader>
-      <SocketContextProvider>
         <TooltipProvider>
           {children}
         </TooltipProvider>
         <Toaster />
-      </SocketContextProvider>
     </Preloader>
   </ThemeProvider>;
 };

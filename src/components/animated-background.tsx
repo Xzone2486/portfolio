@@ -11,7 +11,6 @@ import { usePreloader } from "./preloader";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { Section, getKeyboardState } from "./animated-background-config";
-import { useSounds } from "./realtime/hooks/use-sounds";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -23,8 +22,6 @@ const AnimatedBackground = () => {
   const [splineApp, setSplineApp] = useState<Application>();
   const selectedSkillRef = useRef<Skill | null>(null);
 
-  const { playPressSound, playReleaseSound } = useSounds();
-
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [activeSection, setActiveSection] = useState<Section>("hero");
 
@@ -34,6 +31,83 @@ const AnimatedBackground = () => {
 
   const [keyboardRevealed, setKeyboardRevealed] = useState(false);
   const router = useRouter();
+
+  // Audio context and buffers for sounds
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const pressBufferRef = useRef<AudioBuffer | null>(null);
+  const releaseBufferRef = useRef<AudioBuffer | null>(null);
+
+  // Load sounds on mount
+  useEffect(() => {
+    const loadSound = async () => {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+
+        const ctx = new AudioContext();
+        audioContextRef.current = ctx;
+
+        // Load press sound
+        const response = await fetch('/assets/keycap-sounds/press.mp3');
+        const arrayBuffer = await response.arrayBuffer();
+        const decodedBuffer = await ctx.decodeAudioData(arrayBuffer);
+        pressBufferRef.current = decodedBuffer;
+
+        // Load release sound
+        const releaseResponse = await fetch('/assets/keycap-sounds/release.mp3');
+        const releaseArrayBuffer = await releaseResponse.arrayBuffer();
+        const releaseDecodedBuffer = await ctx.decodeAudioData(releaseArrayBuffer);
+        releaseBufferRef.current = releaseDecodedBuffer;
+      } catch (error) {
+        console.error("Failed to load keycap sound", error);
+      }
+    };
+
+    loadSound();
+
+    return () => {
+      audioContextRef.current?.close();
+    };
+  }, []);
+
+  const getContext = async () => {
+    if (!audioContextRef.current) return null;
+    if (audioContextRef.current.state === 'suspended') {
+      await audioContextRef.current.resume();
+    }
+    return audioContextRef.current;
+  };
+
+  const playSoundBuffer = async (buffer: AudioBuffer | null, baseDetune = 0) => {
+    try {
+      const ctx = await getContext();
+      if (!ctx || !buffer) return;
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      // Add slight variation
+      source.detune.value = baseDetune + (Math.random() * 200) - 100;
+
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.4;
+
+      source.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      source.start(0);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const playPressSound = () => {
+    playSoundBuffer(pressBufferRef.current);
+  };
+
+  const playReleaseSound = () => {
+    playSoundBuffer(releaseBufferRef.current);
+  };
 
   // --- Event Handlers ---
 
@@ -327,7 +401,6 @@ const AnimatedBackground = () => {
 
   useEffect(() => {
     if (!selectedSkill || !splineApp) return;
-    // console.log(selectedSkill)
     splineApp.setVariable("heading", selectedSkill.label);
     splineApp.setVariable("desc", selectedSkill.shortDescription);
   }, [selectedSkill]);
@@ -350,7 +423,7 @@ const AnimatedBackground = () => {
         yoyoEase: true,
         ease: "back.inOut",
         delay: 2.5,
-        paused: true, // Start paused
+        paused: true,
       });
 
       teardownKeyboard = gsap.fromTo(
@@ -434,7 +507,7 @@ const AnimatedBackground = () => {
           setSplineApp(app);
           bypassLoading();
         }}
-        scene="/assets/skills-keyboard.spline"
+        scene="/assets/keyboard.spline"
       />
     </Suspense>
   );

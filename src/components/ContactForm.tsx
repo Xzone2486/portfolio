@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "./ui/use-toast";
 import { Button } from "./ui/button";
 import { useRouter } from "next/navigation";
+import { config } from "@/data/config";
 
 const ContactForm = () => {
   const [fullName, setFullName] = React.useState("");
@@ -18,48 +19,30 @@ const ContactForm = () => {
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const res = await fetch("/api/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName,
-          email,
-          message,
-        }),
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      toast({
-        title: "Thank you!",
-        description: "I'll get back to you as soon as possible.",
-        variant: "default",
-        className: cn("top-0 mx-auto flex fixed md:top-4 md:right-4"),
-      });
-      setLoading(false);
-      setFullName("");
-      setEmail("");
-      setMessage("");
-      const timer = setTimeout(() => {
-        router.push("/");
-        clearTimeout(timer);
-      }, 1000);
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Something went wrong! Please check the fields.",
-        className: cn(
-          "top-0 w-full flex justify-center fixed md:max-w-7xl md:top-4 md:right-4"
-        ),
-        variant: "destructive",
-      });
-    }
+
+    // Construct mailto link
+    const subject = `Portfolio Contact from ${fullName}`;
+    const body = `Name: ${fullName}\nEmail: ${email}\n\nMessage:\n${message}`;
+    const mailtoLink = `mailto:${config.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    // Open default mail client
+    window.location.href = mailtoLink;
+
+    // Show feedback
+    toast({
+      title: "Opening Mail Client",
+      description: "Please send the email from your default client.",
+      variant: "default",
+      className: cn("top-0 mx-auto flex fixed md:top-4 md:right-4"),
+    });
+
     setLoading(false);
+    setFullName("");
+    setEmail("");
+    setMessage("");
   };
   return (
     <form className="min-w-7xl mx-auto sm:mt-4" onSubmit={handleSubmit}>
