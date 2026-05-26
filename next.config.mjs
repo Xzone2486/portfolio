@@ -14,7 +14,7 @@ const nextConfig = {
         source: "/ansh_portfolio/:path*",
         destination: "https://ansh-portfolio-iota.vercel.app/:path*"
       }
-    ];
+    ]; 
   }
 };
 
