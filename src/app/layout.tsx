@@ -10,6 +10,7 @@ import AppOverlays from "@/components/app-overlays";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://anshprasad.dev"),
   title: config.title,
   description: config.description.long,
   keywords: config.keywords,
